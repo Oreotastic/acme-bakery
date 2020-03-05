@@ -1,0 +1,238 @@
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+    <link rel='stylesheet' type="text/css" href='/styles.css' />
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/axios/0.18.0/axios.js'></script>
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+    <script src="https://unpkg.com/react@16/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@16/umd/react-dom.development.js" crossorigin></script>
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/react-router-dom/5.0.0/react-router-dom.js'></script>
+    <script src="https://kit.fontawesome.com/1dfd97cbea.js" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id='root'></div>
+    <script type='text/babel'>
+      const { useState, useEffect } = React;
+
+      const RecipeUpdate = ({recipe, updateRecipe}) => {
+        const [name, setName] = useState('')
+        const onSubmit = (el) => {
+          el.preventDefault() 
+          updateRecipe(recipe.id, name)
+        }
+
+        return(
+          <div>
+            <form onSubmit={onSubmit}>
+              <input type="text" value={name} onChange={(el) => setName(el.target.value)}/>
+              <button>Update</button>
+            </form>
+          </div>
+        )
+      }
+
+      const ChefUpdate = ({chef, updateChef}) => {
+        const [name, setName] = useState('')
+        const onSubmit = (el) => {
+          el.preventDefault()
+          updateChef(chef.id, name)
+        }
+
+        return (
+          <div>
+            <form onSubmit={onSubmit}>
+              <input type="text" value={name} onChange={(el) => setName(el.target.value)}/>
+              <button>Update</button>
+            </form>
+          </div>
+        )
+      }
+
+      const ChefsForm = ({createChef}) => {
+        const [name, setName] = useState('')
+      
+        const onSubmit = (el) => {
+          el.preventDefault()
+          createChef({name})
+        }
+
+        return(
+          <div>
+            <form onSubmit={onSubmit}>
+              <input type="text" value={name} onChange={(el) => setName(el.target.value)}/>
+              <button>Create</button>
+            </form>
+          </div>
+        )
+      }
+
+      const RecipeForm = ({createRecipe, chefs}) => {
+        const onSubmit = (el) => {
+          el.preventDefault()
+          const name = el.target.firstChild.nextSibling.value
+          const select = el.target.firstChild.innerText
+          const options = [...el.target.firstChild.childNodes]
+          const found = options.find(option => option.innerText === select)
+          const chef_id = found.dataset.id
+          createRecipe({name, chef_id})
+        }
+
+        return (
+          <div>
+            <form onSubmit={onSubmit}>
+              <select name="cheflist">
+                {
+                  chefs.map(chef => {
+                    return(
+                      <option data-id={chef.id} key={chef.id} value={chef.name}>
+                        {chef.name}
+                      </option>
+                    )
+                  })
+                }
+                </select>
+                <input type="text" />
+                <button>Create</button>
+            </form>
+          </div>
+        )
+      }
+
+      const Chefs = ({chefs, recipes, createChef, deleteChef, updateChef}) => {
+
+        return(
+          <div className="container">
+            <h3>Chefs</h3>
+            <ul>
+              {
+                chefs.map(chef => {
+                  return (
+                    <li key={chef.id}>
+                      <p>{chef.name}</p>
+                      <button onClick={()=>deleteChef(chef.id)}>X</button>
+                      <ChefUpdate chef={chef} updateChef={updateChef} />
+                    </li>
+                  )
+                })
+              }
+            </ul>
+            <ChefsForm createChef={createChef} />
+          </div>
+        )
+      }
+
+      const Recipes = ({recipes, chefs, createRecipe, deleteRecipe, updateRecipe}) => {
+
+        return(
+          <div className="container">
+            <h3>Recipes</h3>
+            <ul>
+            {
+              recipes.map(recipe => {
+                return (
+                  <li key={recipe.id}>
+                    <p>{recipe.name}</p>
+                    <button onClick={()=>deleteRecipe(recipe.id)}>X</button>
+                    <RecipeUpdate recipe={recipe} updateRecipe={updateRecipe} />
+                  </li>
+                )
+              })
+            }
+            </ul>
+            <RecipeForm chefs={chefs} createRecipe={createRecipe}/>
+          </div>
+        )
+      }
+
+      const App = () => {
+      
+        const [chefs, setChefs] = useState([])
+        const [recipes, setRecipes] = useState([])
+
+        const createChef = async(data) => {
+          const created = (await axios.post('/api/chefs', data)).data
+          setChefs([...chefs, created])
+        }
+
+        const createRecipe = async(data) => {
+          const created = (await axios.post('/api/recipes', data)).data
+          setRecipes([...recipes, created])
+        }
+
+        const deleteChef = async(id) => {
+          try {
+            await axios.delete(`/api/chefs/${id}`)
+            setChefs(chefs.filter(chef => chef.id !== id))
+          } catch (error) {
+            window.alert(error)
+          }
+        }
+
+        const deleteRecipe = async(id) => {
+          try {
+            await axios.delete(`/api/recipes/${id}`)
+            setRecipes(recipes.filter(recipe => recipe.id !== id))
+          } catch (error) {
+            window.alert(error)
+          }
+        }
+
+        const updateChef = async(id, name) => {
+          
+          try {
+            await axios.put(`/api/chefs/${id}`, {name})
+            setChefs(chefs.map(chef => {
+              if(chef.id === id) {
+                chef.name = name
+                return chef
+              } else {
+                return chef
+              }
+            }))
+          } catch (error) {
+            window.alert(error)
+          }
+        }
+
+        const updateRecipe = async(id, name) => {
+          
+          try {
+            await axios.put(`/api/recipes/${id}`, {name})
+            setRecipes(recipes.map((recipe) => {
+              if(recipe.id === id) {
+                recipe.name = name
+                return recipe
+              } else {
+                return recipe
+              }
+            }))
+          } catch (error) {
+            window.alert(error)
+          }
+        }
+
+        useEffect(() => {
+          Promise.all([
+            axios.get('/api/chefs'),
+            axios.get('/api/recipes')
+          ])
+          .then((results) => {
+            setChefs(results[0].data)
+            setRecipes(results[1].data)
+          })
+        }, [])
+        
+        return (
+          <div className="app">
+            <h1>Acme Bakery</h1>
+            <Chefs chefs={chefs} recipes={recipes} createChef={createChef} deleteChef={deleteChef} updateChef={updateChef}/>
+            <Recipes recipes={recipes} chefs={chefs} createRecipe={createRecipe} deleteRecipe={deleteRecipe} updateRecipe={updateRecipe} />
+          </div>
+        );
+      };
+      const root = document.querySelector('#root');
+      ReactDOM.render(<App />, root);
+    </script>
+  </body>
+</html>
